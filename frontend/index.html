@@ -17,6 +17,7 @@
   --green:#22c55e;--yellow:#eab308;--red:#ef4444;
   --mono:'IBM Plex Mono',monospace;--sans:'Space Grotesk',sans-serif;
   --grid-color:rgba(59,130,246,0.03);
+  --map-tiles:dark;
 }
 [data-theme="light"]{
   --bg:#f4f6fa;--bg2:#ffffff;--bg3:#eef1f7;
@@ -25,6 +26,7 @@
   --accent:#2563eb;--accent2:#3b82f6;
   --green:#16a34a;--yellow:#ca8a04;--red:#dc2626;
   --grid-color:rgba(37,99,235,0.04);
+  --map-tiles:light;
 }
 [data-theme="terminal"]{
   --bg:#0d1117;--bg2:#0d1117;--bg3:#161b22;
@@ -34,6 +36,7 @@
   --green:#00ff41;--yellow:#f0e040;--red:#ff4040;
   --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Mono',monospace;
   --grid-color:rgba(0,255,65,0.03);
+  --map-tiles:dark;
 }
 
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -49,6 +52,13 @@ header{margin-bottom:28px;display:flex;align-items:flex-start;justify-content:sp
 .logo-icon{width:34px;height:34px;border:1.5px solid var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
 h1{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--accent);}
 .tagline{font-family:var(--mono);font-size:11px;color:var(--muted);}
+
+/* status dot */
+.status-row{display:flex;align-items:center;gap:6px;margin-top:6px;}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);}
+.status-dot.online{background:var(--green);box-shadow:0 0 6px var(--green);}
+.status-dot.offline{background:var(--red);}
+.status-text{font-family:var(--mono);font-size:10px;color:var(--muted);}
 
 /* theme switcher */
 .theme-switcher{display:flex;gap:6px;align-items:center;}
@@ -102,7 +112,7 @@ h1{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--accent);}
 
 /* provider row */
 .provider-row{padding:14px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-.provider-logo{width:28px;height:28px;border-radius:6px;object-fit:contain;background:var(--bg3);border:1px solid var(--border2);flex-shrink:0;}
+.provider-logo{width:28px;height:28px;border-radius:6px;object-fit:contain;background:var(--bg3);border:1px solid var(--border2);flex-shrink:0;padding:2px;}
 .provider-logo-placeholder{width:28px;height:28px;border-radius:6px;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
 .provider-name{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text);text-decoration:none;}
 .provider-name:hover{color:var(--accent);}
@@ -148,9 +158,12 @@ h1{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--accent);}
 .source-badge{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:5px;color:var(--muted);border:1px solid var(--border2);}
 .source-badge.active{color:var(--accent2);border-color:rgba(59,130,246,0.35);}
 
-/* map */
+/* inline map */
 #map{height:320px;border-radius:12px;margin-top:16px;border:1.5px solid var(--border2);overflow:hidden;}
 .leaflet-container{background:var(--bg2);}
+.leaflet-popup-content-wrapper{background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:8px;font-family:var(--mono);font-size:12px;}
+.leaflet-popup-tip{background:var(--bg2);}
+.leaflet-popup-close-button{color:var(--muted)!important;}
 
 /* bulk */
 .bulk-textarea{width:100%;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;padding:14px 18px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;resize:vertical;min-height:130px;transition:border-color .2s;}
@@ -192,7 +205,9 @@ tr:hover td{background:rgba(59,130,246,0.04);}
 
 /* map panel */
 #map-panel-map{height:420px;border-radius:12px;border:1.5px solid var(--border2);overflow:hidden;}
-.map-info{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:10px;}
+.map-controls{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;}
+.map-info{font-family:var(--mono);font-size:12px;color:var(--muted);flex:1;}
+.btn-sm{font-family:var(--mono);font-size:11px;font-weight:600;padding:6px 14px;border-radius:8px;border:none;cursor:pointer;transition:all .2s;}
 
 /* loading/error */
 .loading{text-align:center;padding:40px;font-family:var(--mono);color:var(--muted);font-size:13px;}
@@ -205,6 +220,7 @@ tr:hover td{background:rgba(59,130,246,0.04);}
   .info-cell{border-right:none!important;}
   .info-cell:nth-last-child(-n+2){border-bottom:1px solid var(--border);}
   .info-cell:last-child{border-bottom:none;}
+  .tabs{flex-wrap:wrap;}
 }
 </style>
 </head>
@@ -218,6 +234,10 @@ tr:hover td{background:rgba(59,130,246,0.04);}
         <h1>vpn_detector</h1>
       </div>
       <div class="tagline">// ip intelligence &middot; vpn detection &middot; provider lookup</div>
+      <div class="status-row">
+        <div class="status-dot" id="apiDot"></div>
+        <span class="status-text" id="apiStatus">checking api...</span>
+      </div>
     </div>
     <div class="theme-switcher">
       <button class="theme-btn active" onclick="setTheme('dark')">Dark</button>
@@ -272,8 +292,18 @@ tr:hover td{background:rgba(59,130,246,0.04);}
       <input class="ip-input" id="mapIpInput" type="text" placeholder="Enter IP to pin on map  e.g. 8.8.8.8" autocomplete="off" spellcheck="false"/>
       <button class="lookup-btn" onclick="mapLookup()">Add Pin &rarr;</button>
     </div>
+    <div class="examples" style="margin-bottom:12px;">
+      <span>quick:</span>
+      <span class="chip" onclick="mapTryIp('8.8.8.8')">8.8.8.8</span>
+      <span class="chip" onclick="mapTryIp('1.1.1.1')">1.1.1.1</span>
+      <span class="chip" onclick="mapTryIp('185.220.101.1')">185.220.101.1</span>
+      <span class="chip" onclick="mapTryMyIp()">my IP</span>
+    </div>
     <div id="map-panel-map"></div>
-    <div class="map-info" id="map-info">Enter an IP above to plot it on the map. You can add multiple IPs.</div>
+    <div class="map-controls">
+      <span class="map-info" id="map-info">Enter an IP above to plot it on the map. You can add multiple IPs.</span>
+      <button class="btn btn-outline btn-sm" onclick="clearMapPins()" style="font-size:11px;padding:5px 12px;">Clear Pins</button>
+    </div>
   </div>
 
   <!-- HISTORY -->
@@ -295,42 +325,88 @@ let history = JSON.parse(localStorage.getItem('vpn_history2') || '[]');
 let singleMap = null, panelMap = null;
 let panelMarkers = [];
 
-// ── Theme ──────────────────────────────────────────────────────────────────
+// ── Map tile URLs ─────────────────────────────────────────────────────────
+function getTileUrl() {
+  const theme = document.body.getAttribute('data-theme');
+  if (theme === 'light') {
+    return 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+  }
+  return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+}
+
+// ── Theme ─────────────────────────────────────────────────────────────────
 function setTheme(t) {
   document.body.setAttribute('data-theme', t);
-  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.theme-btn').forEach(b => { if(b.textContent.toLowerCase()===t) b.classList.add('active'); });
+  document.querySelectorAll('.theme-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.toLowerCase() === t);
+  });
   localStorage.setItem('vpn_theme', t);
+  // Update map tiles if maps exist
+  updateMapTiles();
 }
-const savedTheme = localStorage.getItem('vpn_theme');
-if(savedTheme) setTheme(savedTheme);
 
-// ── Tabs ────────────────────────────────────────────────────────────────────
+function updateMapTiles() {
+  const url = getTileUrl();
+  const attr = '&copy; OpenStreetMap &copy; CARTO';
+  [singleMap, panelMap].forEach(map => {
+    if (!map) return;
+    map.eachLayer(layer => {
+      if (layer instanceof L.TileLayer) map.removeLayer(layer);
+    });
+    L.tileLayer(url, { attribution: attr, subdomains: 'abcd', maxZoom: 19 }).addTo(map);
+  });
+}
+
+const savedTheme = localStorage.getItem('vpn_theme');
+if (savedTheme) setTheme(savedTheme);
+
+// ── API health check ──────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const res = await fetch(`${API}/api/health`);
+    const data = await res.json();
+    const dot = document.getElementById('apiDot');
+    const txt = document.getElementById('apiStatus');
+    dot.classList.add('online');
+    const sources = [];
+    if (data.mmdb_asn && data.mmdb_city) sources.push('MMDB');
+    sources.push('ip-api', 'proxycheck.io', 'ipapi.is', 'getipintel');
+    txt.textContent = `api online · ${sources.join(' + ')} active`;
+  } catch {
+    const dot = document.getElementById('apiDot');
+    const txt = document.getElementById('apiStatus');
+    dot.classList.add('offline');
+    txt.textContent = 'api offline';
+  }
+}
+checkHealth();
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
 function switchTab(name) {
   const names = ['single','bulk','map','history'];
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
-  if(name==='history') renderHistory();
-  if(name==='map' && !panelMap) initPanelMap();
+  if (name === 'history') renderHistory();
+  if (name === 'map' && !panelMap) initPanelMap();
 }
 
-// ── Provider info helpers ──────────────────────────────────────────────────
+// ── Provider badge helper ─────────────────────────────────────────────────
 function providerBadgeClass(type) {
-  if(!type) return '';
+  if (!type) return 'badge-isp';
   const t = type.toLowerCase();
-  if(t.includes('vpn')) return 'badge-vpn';
-  if(t.includes('tor')) return 'badge-tor';
-  if(t.includes('cloud')) return 'badge-cloud';
-  if(t.includes('datacenter')) return 'badge-datacenter';
-  if(t.includes('cdn')) return 'badge-cdn';
+  if (t.includes('vpn')) return 'badge-vpn';
+  if (t.includes('tor')) return 'badge-tor';
+  if (t.includes('cloud')) return 'badge-cloud';
+  if (t.includes('datacenter')) return 'badge-datacenter';
+  if (t.includes('cdn')) return 'badge-cdn';
   return 'badge-isp';
 }
 
 function buildProviderRow(d) {
   const p = d.provider || {};
   const name = d.org_clean || d.org || 'Unknown';
-  const type = p.type;
+  const type = p.type || 'ISP';
   const site = p.website;
   const logo = p.logo;
 
@@ -342,9 +418,7 @@ function buildProviderRow(d) {
     ? `<a class="provider-name" href="${site}" target="_blank" rel="noopener">${name}</a>`
     : `<span class="provider-name">${name}</span>`;
 
-  const badgeHtml = type
-    ? `<span class="provider-type-badge ${providerBadgeClass(type)}">${type}</span>`
-    : '';
+  const badgeHtml = `<span class="provider-type-badge ${providerBadgeClass(type)}">${type}</span>`;
 
   const linkHtml = site
     ? `<a class="provider-link" href="${site}" target="_blank" rel="noopener">&#8599; visit</a>`
@@ -353,17 +427,18 @@ function buildProviderRow(d) {
   return `<div class="provider-row">${logoHtml}${nameHtml}${badgeHtml}${linkHtml}</div>`;
 }
 
-// ── Card builder ───────────────────────────────────────────────────────────
+// ── Card builder ──────────────────────────────────────────────────────────
 function buildCard(d) {
   const det = d.detection || {};
   const level = det.level || 'low';
   const score = det.score || 0;
   const flags = det.flags || [];
+  const s = d.sources || {};
   const flagHtml = flags.length
     ? flags.map(f => {
         let cls = 'neutral';
-        if(['vpn_flag','known_vpn_provider','proxy'].includes(f)) cls = 'vpn';
-        if(['datacenter','hosting'].includes(f)) cls = 'dc';
+        if (['vpn_flag','known_vpn_provider','proxy'].includes(f)) cls = 'vpn';
+        if (['datacenter','hosting'].includes(f)) cls = 'dc';
         return `<span class="flag-tag ${cls}">${f.replace(/_/g,' ')}</span>`;
       }).join('')
     : '<span class="flag-tag clean">clean</span>';
@@ -375,7 +450,7 @@ function buildCard(d) {
         <div class="verdict-dot"></div>
         <div>
           <div class="verdict-text">${det.verdict}</div>
-          <div class="verdict-sub">${d.ip} &middot; AS${d.asn||'?'}</div>
+          <div class="verdict-sub">${d.ip} &middot; ${d.asn||'ASN unknown'}</div>
         </div>
       </div>
       <div class="score-pill">Risk ${score}/100</div>
@@ -397,20 +472,29 @@ function buildCard(d) {
     </div>
     <div class="flags-row"><span class="flags-label">Signals</span>${flagHtml}</div>
     <div class="source-row">
-      <span class="source-badge ${d.mmdb_available?'active':''}">
-        ${d.mmdb_available?'&#10003;':'&#10007;'} MaxMind MMDB
+      <span class="source-badge ${s.mmdb?'active':''}">
+        ${s.mmdb?'&#10003;':'&#10007;'} MaxMind MMDB
       </span>
-      <span class="source-badge ${d.raw_ip_api&&d.raw_ip_api.status==='success'?'active':''}">
-        ${d.raw_ip_api&&d.raw_ip_api.status==='success'?'&#10003;':'&#10007;'} ip-api.com
+      <span class="source-badge ${s.ip_api?'active':''}">
+        ${s.ip_api?'&#10003;':'&#10007;'} ip-api.com
+      </span>
+      <span class="source-badge ${s.proxycheck?'active':''}">
+        ${s.proxycheck?'&#10003;':'&#10007;'} proxycheck.io
+      </span>
+      <span class="source-badge ${s.ipapiis?'active':''}">
+        ${s.ipapiis?'&#10003;':'&#10007;'} ipapi.is
+      </span>
+      <span class="source-badge ${s.getipintel?'active':''}">
+        ${s.getipintel?'&#10003;':'&#10007;'} getipintel
       </span>
     </div>
   </div>`;
 }
 
-// ── Single lookup ──────────────────────────────────────────────────────────
+// ── Single lookup ─────────────────────────────────────────────────────────
 async function singleLookup(ipOverride) {
   const ip = ipOverride || document.getElementById('ipInput').value.trim();
-  if(!ip) return;
+  if (!ip) return;
   const resultEl = document.getElementById('single-result');
   const mapEl = document.getElementById('map');
   const btn = document.getElementById('lookupBtn');
@@ -419,11 +503,11 @@ async function singleLookup(ipOverride) {
   resultEl.innerHTML = `<div class="card"><div class="loading"><div class="spinner"></div><br/>looking up ${ip}...</div></div>`;
   try {
     const res = await fetch(`${API}/api/lookup/${encodeURIComponent(ip)}`);
-    if(!res.ok){const e=await res.json();throw new Error(e.detail||'Lookup failed');}
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail||'Lookup failed'); }
     const data = await res.json();
     resultEl.innerHTML = buildCard(data);
     addToHistory(data);
-    if(data.latitude && data.longitude) {
+    if (data.latitude && data.longitude) {
       mapEl.style.display = 'block';
       showSingleMap(data);
     }
@@ -434,48 +518,47 @@ async function singleLookup(ipOverride) {
 
 function tryIp(ip) { document.getElementById('ipInput').value = ip; singleLookup(ip); }
 async function tryMyIp() {
-  try { const r=await fetch('https://api.ipify.org?format=json'); const {ip}=await r.json(); tryIp(ip); }
-  catch { alert('Could not detect your IP'); }
+  try {
+    const r = await fetch('https://api.ipify.org?format=json');
+    const { ip } = await r.json();
+    tryIp(ip);
+  } catch { alert('Could not detect your IP'); }
 }
 document.getElementById('ipInput').addEventListener('keydown', e => { if(e.key==='Enter') singleLookup(); });
 document.getElementById('mapIpInput').addEventListener('keydown', e => { if(e.key==='Enter') mapLookup(); });
 
-// ── Single map ─────────────────────────────────────────────────────────────
+// ── Single map ────────────────────────────────────────────────────────────
 function showSingleMap(data) {
-  const mapEl = document.getElementById('map');
-  if(singleMap) { singleMap.remove(); singleMap = null; }
-  singleMap = L.map('map', {zoomControl:true}).setView([data.latitude, data.longitude], 8);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution:'&copy; OpenStreetMap &copy; CARTO', subdomains:'abcd', maxZoom:19
-  }).addTo(singleMap);
+  if (singleMap) { singleMap.remove(); singleMap = null; }
+  singleMap = L.map('map', { zoomControl:true }).setView([data.latitude, data.longitude], 8);
+  L.tileLayer(getTileUrl(), { attribution:'&copy; OpenStreetMap &copy; CARTO', subdomains:'abcd', maxZoom:19 }).addTo(singleMap);
   const color = data.detection.level==='high'?'#ef4444':data.detection.level==='medium'?'#eab308':'#22c55e';
   const icon = L.divIcon({
     html:`<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 8px ${color}"></div>`,
     iconSize:[14,14], iconAnchor:[7,7], className:''
   });
   L.marker([data.latitude, data.longitude], {icon}).addTo(singleMap)
-    .bindPopup(`<b>${data.ip}</b><br>${data.org_clean||data.org}<br>${data.detection.verdict}`).openPopup();
+    .bindPopup(`<b>${data.ip}</b><br>${data.org_clean||data.org}<br>${data.detection.verdict}`)
+    .openPopup();
 }
 
-// ── Panel map ──────────────────────────────────────────────────────────────
+// ── Panel map ─────────────────────────────────────────────────────────────
 function initPanelMap() {
-  panelMap = L.map('map-panel-map', {zoomControl:true}).setView([20,0], 2);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution:'&copy; OpenStreetMap &copy; CARTO', subdomains:'abcd', maxZoom:19
-  }).addTo(panelMap);
+  panelMap = L.map('map-panel-map', { zoomControl:true }).setView([20,0], 2);
+  L.tileLayer(getTileUrl(), { attribution:'&copy; OpenStreetMap &copy; CARTO', subdomains:'abcd', maxZoom:19 }).addTo(panelMap);
 }
 
 async function mapLookup() {
   const ip = document.getElementById('mapIpInput').value.trim();
-  if(!ip) return;
+  if (!ip) return;
   const infoEl = document.getElementById('map-info');
   infoEl.textContent = `Looking up ${ip}...`;
   try {
     const res = await fetch(`${API}/api/lookup/${encodeURIComponent(ip)}`);
-    if(!res.ok) throw new Error('Lookup failed');
+    if (!res.ok) throw new Error('Lookup failed');
     const data = await res.json();
-    if(!data.latitude||!data.longitude){ infoEl.textContent='No coordinates found for this IP.'; return; }
-    if(!panelMap) initPanelMap();
+    if (!data.latitude||!data.longitude) { infoEl.textContent='No coordinates found for this IP.'; return; }
+    if (!panelMap) initPanelMap();
     const color = data.detection.level==='high'?'#ef4444':data.detection.level==='medium'?'#eab308':'#22c55e';
     const icon = L.divIcon({
       html:`<div style="width:13px;height:13px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 7px ${color}"></div>`,
@@ -486,48 +569,66 @@ async function mapLookup() {
       .openPopup();
     panelMarkers.push(marker);
     panelMap.setView([data.latitude, data.longitude], 6);
-    infoEl.textContent = `Pinned: ${data.ip} &mdash; ${data.org_clean||data.org} &mdash; ${data.detection.verdict}`;
+    infoEl.textContent = `Pinned: ${data.ip} — ${data.org_clean||data.org} — ${data.detection.verdict}`;
     addToHistory(data);
     document.getElementById('mapIpInput').value = '';
   } catch(e) { infoEl.textContent = 'Error: ' + e.message; }
 }
 
-// ── Bulk lookup ────────────────────────────────────────────────────────────
+function mapTryIp(ip) { document.getElementById('mapIpInput').value = ip; mapLookup(); }
+async function mapTryMyIp() {
+  try {
+    const r = await fetch('https://api.ipify.org?format=json');
+    const { ip } = await r.json();
+    mapTryIp(ip);
+  } catch { alert('Could not detect your IP'); }
+}
+
+function clearMapPins() {
+  panelMarkers.forEach(m => { if(panelMap) panelMap.removeLayer(m); });
+  panelMarkers = [];
+  document.getElementById('map-info').textContent = 'All pins cleared. Enter an IP to add a new pin.';
+}
+
+// ── Bulk lookup ───────────────────────────────────────────────────────────
 async function bulkLookup() {
   const raw = document.getElementById('bulkInput').value.trim();
-  if(!raw) return;
+  if (!raw) return;
   const ips = raw.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
-  if(!ips.length) return;
-  if(ips.length>100){ alert('Maximum 100 IPs per request'); return; }
-  const btn=document.getElementById('bulkBtn');
-  const expBtn=document.getElementById('exportBtn');
-  const progress=document.getElementById('bulkProgress');
-  const fill=document.getElementById('progressFill');
-  const label=document.getElementById('progressLabel');
-  const resultEl=document.getElementById('bulk-result');
-  btn.disabled=true; expBtn.disabled=true;
-  progress.style.display='block'; fill.style.width='0%';
-  label.textContent=`Processing 0 / ${ips.length}...`;
-  resultEl.innerHTML=''; bulkResults=[];
-  for(let i=0;i<ips.length;i++){
-    try{
-      const res=await fetch(`${API}/api/lookup/${encodeURIComponent(ips[i])}`);
-      const data=await res.json();
+  if (!ips.length) return;
+  if (ips.length > 100) { alert('Maximum 100 IPs per request'); return; }
+  const btn = document.getElementById('bulkBtn');
+  const expBtn = document.getElementById('exportBtn');
+  const progress = document.getElementById('bulkProgress');
+  const fill = document.getElementById('progressFill');
+  const label = document.getElementById('progressLabel');
+  const resultEl = document.getElementById('bulk-result');
+  btn.disabled = true; expBtn.disabled = true;
+  progress.style.display = 'block'; fill.style.width = '0%';
+  label.textContent = `Processing 0 / ${ips.length}...`;
+  resultEl.innerHTML = ''; bulkResults = [];
+  for (let i = 0; i < ips.length; i++) {
+    try {
+      const res = await fetch(`${API}/api/lookup/${encodeURIComponent(ips[i])}`);
+      const data = await res.json();
       bulkResults.push(data); addToHistory(data);
-    } catch{ bulkResults.push({ip:ips[i],error:'Failed',detection:{verdict:'Error',level:'low',score:0,flags:[]},org:'',org_clean:'',provider:{}}); }
-    const pct=Math.round(((i+1)/ips.length)*100);
-    fill.style.width=pct+'%';
-    label.textContent=`Processing ${i+1} / ${ips.length}...`;
+    } catch {
+      bulkResults.push({ip:ips[i],error:'Failed',detection:{verdict:'Error',level:'low',score:0,flags:[]},org:'',org_clean:'',provider:{}});
+    }
+    const pct = Math.round(((i+1)/ips.length)*100);
+    fill.style.width = pct + '%';
+    label.textContent = `Processing ${i+1} / ${ips.length}...`;
   }
-  label.textContent=`Done &mdash; ${bulkResults.length} IPs processed`;
-  btn.disabled=false; expBtn.disabled=false;
+  label.textContent = `Done — ${bulkResults.length} IPs processed`;
+  btn.disabled = false; expBtn.disabled = false;
   renderBulkTable(bulkResults, resultEl);
 }
 
 function renderBulkTable(results, el) {
   const rows = results.map(r => {
-    const det=r.detection||{}; const p=r.provider||{};
-    const typeHtml = p.type?`<span class="tbadge ${providerBadgeClass(p.type)}" style="font-size:9px">${p.type}</span>`:'—';
+    const det = r.detection||{}; const p = r.provider||{};
+    const type = p.type || 'ISP';
+    const typeHtml = `<span class="tbadge ${providerBadgeClass(type)}" style="font-size:9px">${type}</span>`;
     return `<tr>
       <td style="font-weight:500">${r.ip}</td>
       <td><span class="tbadge ${det.level||'low'}">${det.verdict||'—'}</span></td>
@@ -539,48 +640,50 @@ function renderBulkTable(results, el) {
       <td style="color:var(--muted)">${(det.flags||[]).join(', ')||'—'}</td>
     </tr>`;
   }).join('');
-  el.innerHTML=`<div class="table-wrap"><table>
+  el.innerHTML = `<div class="table-wrap"><table>
     <thead><tr><th>IP</th><th>Verdict</th><th>Score</th><th>Provider</th><th>Type</th><th>Country</th><th>City</th><th>Signals</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
 
 function clearBulk() {
-  document.getElementById('bulkInput').value='';
-  document.getElementById('bulk-result').innerHTML='';
-  document.getElementById('bulkProgress').style.display='none';
-  document.getElementById('exportBtn').disabled=true;
-  bulkResults=[];
+  document.getElementById('bulkInput').value = '';
+  document.getElementById('bulk-result').innerHTML = '';
+  document.getElementById('bulkProgress').style.display = 'none';
+  document.getElementById('exportBtn').disabled = true;
+  bulkResults = [];
 }
 
 function exportCSV() {
-  if(!bulkResults.length) return;
-  const headers=['IP','Verdict','Risk Score','Level','Provider Type','Provider','ISP','Country','City','Timezone','Lat','Lon','Flags','MMDB','Website'];
-  const rows=bulkResults.map(r=>{
-    const det=r.detection||{}; const p=r.provider||{};
+  if (!bulkResults.length) return;
+  const headers = ['IP','Verdict','Risk Score','Level','Provider Type','Provider','ISP','Country','City','Timezone','Lat','Lon','Flags','MMDB','Website'];
+  const rows = bulkResults.map(r => {
+    const det = r.detection||{}; const p = r.provider||{};
     return [r.ip,det.verdict,det.score,det.level,p.type||'',r.org_clean||r.org,r.isp,r.country,r.city,r.timezone,r.latitude,r.longitude,(det.flags||[]).join('; '),r.mmdb_available,p.website||'']
       .map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(',');
   });
-  const csv=[headers.join(','),...rows].join('\n');
-  const blob=new Blob([csv],{type:'text/csv'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='vpn_lookup_results.csv'; a.click();
+  const csv = [headers.join(','),...rows].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='vpn_lookup_results.csv'; a.click();
   URL.revokeObjectURL(url);
 }
 
-// ── History ────────────────────────────────────────────────────────────────
+// ── History ───────────────────────────────────────────────────────────────
 function addToHistory(data) {
-  const entry={...data,timestamp:new Date().toISOString()};
-  history=[entry,...history.filter(h=>h.ip!==data.ip)].slice(0,200);
-  localStorage.setItem('vpn_history2',JSON.stringify(history));
+  const entry = {...data, timestamp:new Date().toISOString()};
+  history = [entry, ...history.filter(h=>h.ip!==data.ip)].slice(0,200);
+  localStorage.setItem('vpn_history2', JSON.stringify(history));
 }
+
 function renderHistory() {
-  const el=document.getElementById('history-content');
-  if(!history.length){ el.innerHTML='<div class="history-empty">No lookups yet.</div>'; return; }
-  const rows=history.map(r=>{
-    const det=r.detection||{}; const p=r.provider||{};
-    const ts=new Date(r.timestamp).toLocaleString();
-    const typeHtml=p.type?`<span class="tbadge ${providerBadgeClass(p.type)}" style="font-size:9px">${p.type}</span>`:'—';
+  const el = document.getElementById('history-content');
+  if (!history.length) { el.innerHTML='<div class="history-empty">No lookups yet.</div>'; return; }
+  const rows = history.map(r => {
+    const det = r.detection||{}; const p = r.provider||{};
+    const ts = new Date(r.timestamp).toLocaleString();
+    const type = p.type || 'ISP';
+    const typeHtml = `<span class="tbadge ${providerBadgeClass(type)}" style="font-size:9px">${type}</span>`;
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${ts}</td>
       <td style="font-weight:500">${r.ip}</td>
@@ -592,11 +695,12 @@ function renderHistory() {
       <td><span style="cursor:pointer;color:var(--accent2);font-size:11px" onclick="replayLookup('${r.ip}')">lookup &rarr;</span></td>
     </tr>`;
   }).join('');
-  el.innerHTML=`<div class="table-wrap"><table>
+  el.innerHTML = `<div class="table-wrap"><table>
     <thead><tr><th>Time</th><th>IP</th><th>Verdict</th><th>Score</th><th>Provider</th><th>Type</th><th>Country</th><th></th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
+
 function replayLookup(ip) { switchTab('single'); document.getElementById('ipInput').value=ip; singleLookup(ip); }
 function clearHistory() { history=[]; localStorage.setItem('vpn_history2','[]'); renderHistory(); }
 </script>
