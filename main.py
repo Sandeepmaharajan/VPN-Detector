@@ -48,12 +48,15 @@ VPN_IP_RANGES: list[tuple[str, str, str]] = [
     ("Mullvad VPN",               "91.90.44.0/23",     "https://mullvad.net"),
     ("Mullvad VPN",               "45.83.220.0/22",    "https://mullvad.net"),
     ("Mullvad VPN",               "194.165.16.0/22",   "https://mullvad.net"),
+    ("Mullvad VPN",               "45.83.223.0/24",    "https://mullvad.net"),
+    ("Mullvad VPN",               "89.45.90.0/24",     "https://mullvad.net"),
     ("NordVPN",                   "103.86.96.0/22",    "https://nordvpn.com"),
     ("NordVPN",                   "185.234.216.0/22",  "https://nordvpn.com"),
     ("NordVPN",                   "37.120.217.0/24",   "https://nordvpn.com"),
     ("NordVPN",                   "45.134.212.0/22",   "https://nordvpn.com"),
     ("ExpressVPN",                "91.207.174.0/24",   "https://expressvpn.com"),
     ("ExpressVPN",                "92.223.88.0/24",    "https://expressvpn.com"),
+    ("ExpressVPN",                "45.129.56.0/22",    "https://expressvpn.com"),
     ("ProtonVPN",                 "185.159.156.0/22",  "https://protonvpn.com"),
     ("ProtonVPN",                 "37.19.198.0/23",    "https://protonvpn.com"),
     ("ProtonVPN",                 "185.107.80.0/22",   "https://protonvpn.com"),
@@ -62,11 +65,15 @@ VPN_IP_RANGES: list[tuple[str, str, str]] = [
     ("IPVanish",                  "198.8.80.0/20",     "https://ipvanish.com"),
     ("CyberGhost VPN",            "93.115.24.0/22",    "https://cyberghostvpn.com"),
     ("CyberGhost VPN",            "77.247.96.0/20",    "https://cyberghostvpn.com"),
+    ("CyberGhost VPN",            "5.254.64.0/20",     "https://cyberghostvpn.com"),
     ("Private Internet Access",   "198.8.80.0/20",     "https://privateinternetaccess.com"),
     ("Private Internet Access",   "209.222.18.0/23",   "https://privateinternetaccess.com"),
     ("TorGuard",                  "23.19.244.0/23",    "https://torguard.net"),
     ("Windscribe",                "185.242.4.0/22",    "https://windscribe.com"),
     ("Windscribe",                "64.44.32.0/20",     "https://windscribe.com"),
+    ("Windscribe",                "23.81.0.0/20",      "https://windscribe.com"),
+    ("Browsec VPN",               "146.70.0.0/16",     "https://browsec.com"),
+    ("Hola VPN",                  "185.121.240.0/22",  "https://hola.org"),
     ("PureVPN",                   "91.109.4.0/22",     "https://purevpn.com"),
     ("PureVPN",                   "185.94.96.0/22",    "https://purevpn.com"),
     ("HideMyAss VPN",             "37.19.200.0/21",    "https://hidemyass.com"),
@@ -119,6 +126,7 @@ VPN_KEYWORDS = [
     "softether","openvpn","wireguard","l2tp","ikev2","pptp","sstp",
     "vpngate","vpn gate","freevpn","anonymizer","anonymous","anon",
     "tor","torproject","exit node","relay",
+    "browsec","hola",
 ]
 DATACENTER_KEYWORDS = [
     "amazon","aws","google","microsoft","azure","digitalocean",
@@ -176,6 +184,8 @@ PROVIDER_DB: dict[str, dict] = {
     "fastly":            {"type":"CDN",         "website":"https://fastly.com",                 "logo":"https://logo.clearbit.com/fastly.com"},
     "hostinger":         {"type":"Cloud",       "website":"https://hostinger.com",              "logo":"https://logo.clearbit.com/hostinger.com"},
     "frantech":          {"type":"Datacenter",  "website":"https://frantech.ca",                "logo":None},
+    "browsec":           {"type":"VPN Provider","website":"https://browsec.com",               "logo":"https://logo.clearbit.com/browsec.com"},
+    "hola":              {"type":"VPN Provider","website":"https://hola.org",                  "logo":"https://logo.clearbit.com/hola.org"},
 }
 
 def get_provider_info(name: str) -> dict:
