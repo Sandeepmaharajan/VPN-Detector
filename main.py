@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
@@ -12,7 +13,9 @@ import csv
 import io
 import re
 import os
+import json
 from pathlib import Path
+import anthropic
 
 app = FastAPI(title="VPN Detector API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -21,7 +24,8 @@ BASE_DIR  = Path(__file__).parent
 MMDB_ASN  = BASE_DIR / "mmdb" / "GeoLite2-ASN.mmdb"
 MMDB_CITY = BASE_DIR / "mmdb" / "GeoLite2-City.mmdb"
 
-PROXYCHECK_KEY = os.environ.get("PROXYCHECK_KEY", "")
+PROXYCHECK_KEY   = os.environ.get("PROXYCHECK_KEY", "")
+ANTHROPIC_KEY    = os.environ.get("ANTHROPIC_API_KEY", "")
 
 # ── Legal suffix cleanup ──────────────────────────────────────────────────────
 LEGAL_SUFFIXES = re.compile(
@@ -512,6 +516,214 @@ async def export_csv(req: BulkRequest):
         iter([output.getvalue()]), media_type="text/csv",
         headers={"Content-Disposition":"attachment; filename=vpn_lookup_results.csv"}
     )
+
+
+# ── AI helpers ────────────────────────────────────────────────────────────────
+def _ip_context(r: dict) -> str:
+    """Serialize a lookup result into a compact text context for Claude."""
+    det  = r.get("detection", {})
+    prov = r.get("provider", {})
+    pc   = r.get("raw_proxycheck", {})
+    ia   = r.get("raw_ipapiis", {})
+    gi   = r.get("raw_getipintel", {})
+    src  = r.get("sources", {})
+    return f"""IP: {r.get("ip")}
+VPN Name: {r.get("vpn_name") or "not identified"}
+VPN Name Source: {r.get("vpn_name_source") or "n/a"}
+Provider/Org: {r.get("org_clean") or r.get("org")}
+Raw ASN Org: {r.get("org")}
+ASN: {r.get("asn")}
+ISP: {r.get("isp")}
+Provider Type: {prov.get("type")}
+Country: {r.get("country")} ({r.get("country_code")})
+City: {r.get("city")}
+Timezone: {r.get("timezone")}
+Coordinates: {r.get("latitude")}, {r.get("longitude")}
+
+--- Detection ---
+Verdict: {det.get("verdict")}
+Risk Score: {det.get("score")}/100
+Level: {det.get("level")}
+Flags: {", ".join(det.get("flags", []))}
+
+--- Source Signals ---
+IP Range Match: {src.get("ip_range", False)}
+ProxyCheck VPN: {pc.get("vpn", "n/a")}  Proxy: {pc.get("proxy", "n/a")}  Type: {pc.get("type", "n/a")}  Operator: {pc.get("operator", "n/a")}  Risk: {pc.get("risk", "n/a")}
+ipapi.is VPN: {ia.get("is_vpn")}  Tor: {ia.get("is_tor")}  Proxy: {ia.get("is_proxy")}  Datacenter: {ia.get("is_datacenter")}  Abuser: {ia.get("is_abuser")}
+GetIPIntel Score: {gi.get("score", "n/a")}
+"""
+
+class AnalyzeRequest(BaseModel):
+    result: dict
+
+class ChatRequest(BaseModel):
+    result: dict
+    messages: list[dict]
+
+class ReportRequest(BaseModel):
+    results: list[dict]
+
+def _claude_client():
+    if not ANTHROPIC_KEY:
+        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not configured")
+    return anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+
+
+# ── POST /api/ai/analyze ─────────────────────────────────────────────────────
+@app.post("/api/ai/analyze")
+async def ai_analyze(req: AnalyzeRequest):
+    """Stream an AI threat analysis for a single IP lookup result."""
+    client = _claude_client()
+    ctx = _ip_context(req.result)
+
+    system = """You are a cybersecurity analyst specializing in IP intelligence and threat assessment.
+Given structured IP lookup data, produce a clear, actionable threat analysis.
+Format your response in these exact sections using markdown:
+
+## Summary
+One sentence verdict.
+
+## What this IP is
+Explain what the provider/service is. Be specific — name the VPN product, datacenter, or ISP.
+
+## Why it scored {score}/100
+Walk through the signals: which flags fired, what each means.
+
+## Risk assessment
+Concrete risk level with real-world context. Who typically uses this IP? What threats does it pose?
+
+## Recommended action
+Clear, specific action: block / monitor / allow / investigate. Include any filter rules if relevant.
+
+Keep each section concise — 2-4 sentences. No bullet spam. Plain professional language."""
+
+    def generate():
+        with client.messages.stream(
+            model="claude-sonnet-4-20250514",
+            max_tokens=800,
+            system=system,
+            messages=[{"role": "user", "content": f"Analyze this IP:\n\n{ctx}"}]
+        ) as stream:
+            for text in stream.text_stream:
+                yield f"data: {json.dumps({'text': text})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+# ── POST /api/ai/chat ────────────────────────────────────────────────────────
+@app.post("/api/ai/chat")
+async def ai_chat(req: ChatRequest):
+    """Stream a conversational reply about an IP."""
+    client = _claude_client()
+    ctx = _ip_context(req.result)
+
+    system = f"""You are a cybersecurity analyst. Answer questions about the following IP address.
+Be concise, technical, and helpful. When asked yes/no questions, lead with the answer.
+If you don't know something not in the data, say so honestly.
+
+IP DATA:
+{ctx}"""
+
+    messages = [{"role": m["role"], "content": m["content"]} for m in req.messages]
+
+    def generate():
+        with client.messages.stream(
+            model="claude-sonnet-4-20250514",
+            max_tokens=500,
+            system=system,
+            messages=messages
+        ) as stream:
+            for text in stream.text_stream:
+                yield f"data: {json.dumps({'text': text})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+# ── POST /api/ai/report ──────────────────────────────────────────────────────
+@app.post("/api/ai/report")
+async def ai_report(req: ReportRequest):
+    """Generate a markdown threat report for bulk results, returned as a downloadable .md file."""
+    client = _claude_client()
+
+    if not req.results:
+        raise HTTPException(status_code=400, detail="No results provided")
+
+    # Build summary table
+    rows = []
+    high, medium, low = [], [], []
+    for r in req.results[:50]:  # cap at 50 for token limit
+        det = r.get("detection", {})
+        lvl = det.get("level", "low")
+        if lvl == "high":   high.append(r)
+        elif lvl == "medium": medium.append(r)
+        else: low.append(r)
+        rows.append(
+            f"| {r.get('ip')} | {r.get('vpn_name') or r.get('org_clean') or r.get('org')} "
+            f"| {det.get('verdict')} | {det.get('score')}/100 "
+            f"| {r.get('country','')} | {', '.join(det.get('flags',[])[:3])} |"
+        )
+
+    table = "| IP | Provider | Verdict | Score | Country | Signals |
+|---|---|---|---|---|---|
+" + "
+".join(rows)
+
+    prompt = f"""You are a senior cybersecurity analyst. Write a professional threat intelligence report for the following bulk IP scan results.
+
+SCAN SUMMARY:
+- Total IPs scanned: {len(req.results)}
+- High risk (VPN/Proxy): {len(high)}
+- Medium risk (Datacenter): {len(medium)}
+- Low risk (Residential/ISP): {len(low)}
+
+RESULTS TABLE:
+{table}
+
+HIGH RISK IPs: {', '.join(r.get('ip','') for r in high[:10])}
+MEDIUM RISK IPs: {', '.join(r.get('ip','') for r in medium[:10])}
+
+Write the report in this exact structure:
+
+# IP Threat Intelligence Report
+
+## Executive Summary
+3-4 sentences: total scanned, key findings, overall risk posture.
+
+## Key Findings
+Most important patterns — which VPN providers appeared, datacenter clusters, geographic anomalies.
+
+## High Risk IPs
+For each high-risk IP: IP, provider, why it's high risk, recommended action.
+
+## Medium Risk IPs  
+Brief overview of datacenter/cloud IPs and their significance.
+
+## Recommendations
+3-5 specific, actionable recommendations based on the findings.
+
+## Conclusion
+One paragraph closing summary.
+
+---
+*Report generated by VPN Detector AI · {len(req.results)} IPs analyzed*"""
+
+    msg = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2000,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    report_md = msg.content[0].text
+
+    return Response(
+        content=report_md.encode("utf-8"),
+        media_type="text/markdown",
+        headers={"Content-Disposition": "attachment; filename=vpn_threat_report.md"}
+    )
+
 
 FRONTEND_DIR = BASE_DIR / "frontend"
 if FRONTEND_DIR.exists():

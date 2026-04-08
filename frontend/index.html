@@ -222,6 +222,48 @@ tr:hover td{background:rgba(59,130,246,0.04);}
   .info-cell:last-child{border-bottom:none;}
   .tabs{flex-wrap:wrap;}
 }
+
+/* ── AI features ── */
+.ai-btn{font-family:var(--mono);font-size:12px;font-weight:600;padding:9px 18px;border-radius:8px;border:1.5px solid rgba(168,85,247,0.4);background:rgba(168,85,247,0.12);color:#c084fc;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:7px;}
+.ai-btn:hover{background:rgba(168,85,247,0.22);border-color:rgba(168,85,247,0.7);}
+.ai-btn:disabled{opacity:.5;cursor:not-allowed;}
+.ai-btn .ai-dot{width:7px;height:7px;border-radius:50%;background:#c084fc;}
+.ai-panel{margin-top:14px;background:var(--bg2);border:1.5px solid rgba(168,85,247,0.25);border-radius:14px;overflow:hidden;}
+.ai-panel-header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:rgba(168,85,247,0.06);}
+.ai-panel-title{font-family:var(--mono);font-size:12px;font-weight:600;color:#c084fc;letter-spacing:.5px;text-transform:uppercase;}
+.ai-body{padding:18px 22px;font-family:var(--sans);font-size:14px;color:var(--text);line-height:1.75;}
+.ai-body h2{font-family:var(--mono);font-size:13px;font-weight:600;color:#c084fc;margin:16px 0 6px;letter-spacing:.3px;}
+.ai-body h2:first-child{margin-top:0;}
+.ai-body p{margin:0 0 10px;color:var(--text);}
+.ai-body strong{color:var(--text);font-weight:600;}
+.ai-body code{font-family:var(--mono);font-size:12px;background:var(--bg3);padding:2px 6px;border-radius:4px;}
+.ai-cursor{display:inline-block;width:2px;height:14px;background:#c084fc;margin-left:2px;animation:blink .8s step-end infinite;vertical-align:text-bottom;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.ai-thinking{font-family:var(--mono);font-size:12px;color:var(--muted);padding:20px 22px;display:flex;align-items:center;gap:10px;}
+.ai-thinking-dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--muted);animation:dot-bounce .9s ease-in-out infinite;}
+.ai-thinking-dots span:nth-child(2){animation-delay:.15s;}
+.ai-thinking-dots span:nth-child(3){animation-delay:.3s;}
+@keyframes dot-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+/* Chat */
+.chat-wrap{display:flex;flex-direction:column;gap:0;}
+.chat-messages{padding:16px 18px;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+.chat-msg{font-family:var(--sans);font-size:13px;line-height:1.65;max-width:88%;}
+.chat-msg.user{align-self:flex-end;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);border-radius:12px 12px 2px 12px;padding:9px 14px;color:var(--text);}
+.chat-msg.ai{align-self:flex-start;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);border-radius:12px 12px 12px 2px;padding:9px 14px;color:var(--text);}
+.chat-msg.ai.streaming{border-color:rgba(168,85,247,0.4);}
+.chat-input-row{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);}
+.chat-input{flex:1;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:9px 14px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none;transition:border-color .2s;}
+.chat-input:focus{border-color:rgba(168,85,247,0.5);}
+.chat-input::placeholder{color:var(--muted);}
+.chat-send{font-family:var(--mono);font-size:12px;font-weight:600;padding:9px 16px;border-radius:8px;border:none;background:rgba(168,85,247,0.2);color:#c084fc;cursor:pointer;transition:background .2s;}
+.chat-send:hover{background:rgba(168,85,247,0.35);}
+.chat-send:disabled{opacity:.4;cursor:not-allowed;}
+/* Report */
+.report-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+.report-preview{margin-top:14px;background:var(--bg2);border:1.5px solid rgba(168,85,247,0.2);border-radius:12px;padding:20px 24px;font-family:var(--sans);font-size:13px;line-height:1.75;color:var(--text);white-space:pre-wrap;}
+.report-preview h1{font-family:var(--mono);font-size:16px;font-weight:600;color:#c084fc;margin:0 0 16px;}
+.report-preview h2{font-family:var(--mono);font-size:13px;font-weight:600;color:#c084fc;margin:18px 0 6px;}
+.report-preview p{margin:0 0 8px;}
 </style>
 </head>
 <body data-theme="dark">
@@ -251,6 +293,7 @@ tr:hover td{background:rgba(59,130,246,0.04);}
     <button class="tab" onclick="switchTab('bulk')">Bulk Lookup</button>
     <button class="tab" onclick="switchTab('map')">Map View</button>
     <button class="tab" onclick="switchTab('history')">History</button>
+    <button class="tab" onclick="switchTab('ai')">AI Report</button>
   </div>
 
   <!-- SINGLE -->
@@ -313,6 +356,22 @@ tr:hover td{background:rgba(59,130,246,0.04);}
       <button class="btn btn-outline" onclick="clearHistory()" style="padding:6px 13px;font-size:11px;">Clear All</button>
     </div>
     <div id="history-content"></div>
+  </div>
+
+
+  <!-- AI REPORT PANEL -->
+  <div class="panel" id="panel-ai">
+    <div style="margin-bottom:16px">
+      <div style="font-family:var(--mono);font-size:13px;color:var(--text);font-weight:600;margin-bottom:6px">AI Bulk Threat Report</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted)">Run a bulk lookup first, then generate an AI-written threat intelligence report.</div>
+    </div>
+    <div class="report-actions">
+      <button class="ai-btn" id="reportBtn" onclick="generateReport()">
+        <span class="ai-dot"></span> Generate AI Report
+      </button>
+      <button class="btn btn-outline" id="reportDownloadBtn" onclick="downloadReport()" disabled style="font-size:12px">Download .md</button>
+    </div>
+    <div id="report-output"></div>
   </div>
 
 </div>
@@ -383,7 +442,7 @@ checkHealth();
 
 // ── Tabs ──────────────────────────────────────────────────────────────────
 function switchTab(name) {
-  const names = ['single','bulk','map','history'];
+  const names = ['single','bulk','map','history','ai'];
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
@@ -471,6 +530,7 @@ function buildCard(d) {
     : '<span class="flag-tag clean">clean</span>';
   const val = (v) => v || `<span class="dim">&mdash;</span>`;
 
+  currentResult = d;
   return `<div class="card ${level}">
     <div class="verdict-banner ${level}">
       <div class="verdict-left">
@@ -518,7 +578,18 @@ function buildCard(d) {
         ${s.ip_range?'&#9670; IP Range DB &middot; HIT':'&#10003; IP Range DB'}
       </span>
     </div>
-  </div>`;
+  </div>
+  <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+    <button class="ai-btn" id="ai-analyze-btn" onclick="runAiAnalysis(currentResult)">
+      <span class="ai-dot"></span> AI Threat Analysis
+    </button>
+    <button class="ai-btn" onclick="openChat(currentResult)">
+      <span class="ai-dot"></span> Chat about this IP
+    </button>
+  </div>
+  <div id="ai-analysis-container" style="margin-top:4px"></div>
+  <div id="ip-chat-container" style="margin-top:4px"></div>
+`;
 }
 
 // ── Single lookup ─────────────────────────────────────────────────────────
@@ -536,6 +607,7 @@ async function singleLookup(ipOverride) {
     let data;
     try { data = await res.json(); } catch { throw new Error(`Server error (HTTP ${res.status}) — is the backend running?`); }
     if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    currentResult = data;
     resultEl.innerHTML = buildCard(data);
     addToHistory(data);
     if (data.latitude && data.longitude) {
@@ -736,6 +808,226 @@ function renderHistory() {
 
 function replayLookup(ip) { switchTab('single'); document.getElementById('ipInput').value=ip; singleLookup(ip); }
 function clearHistory() { history=[]; localStorage.setItem('vpn_history2','[]'); renderHistory(); }
+
+// ── Current lookup result (shared across AI features) ─────────────────────
+let currentResult = null;
+let reportMarkdown = '';
+
+// ── AI Threat Analysis ─────────────────────────────────────────────────────
+async function runAiAnalysis(data) {
+  const container = document.getElementById('ai-analysis-container');
+  if (!container) return;
+  const btn = document.getElementById('ai-analyze-btn');
+  if (btn) btn.disabled = true;
+
+  container.innerHTML = `
+    <div class="ai-panel">
+      <div class="ai-panel-header">
+        <div class="ai-dot" style="width:8px;height:8px;border-radius:50%;background:#c084fc"></div>
+        <span class="ai-panel-title">AI Threat Analysis</span>
+      </div>
+      <div class="ai-thinking" id="ai-thinking">
+        <span>Analyzing</span>
+        <div class="ai-thinking-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+      <div class="ai-body" id="ai-stream-output" style="display:none"></div>
+    </div>`;
+
+  try {
+    const res = await fetch('/api/ai/analyze', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({result: data})
+    });
+    if (!res.ok) throw new Error('AI analysis failed');
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+
+    document.getElementById('ai-thinking').style.display = 'none';
+    const out = document.getElementById('ai-stream-output');
+    out.style.display = 'block';
+    out.innerHTML = '<span class="ai-cursor"></span>';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream: true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data_str = line.slice(6);
+          if (data_str === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(data_str);
+            fullText += parsed.text;
+            out.innerHTML = renderMarkdown(fullText) + '<span class="ai-cursor"></span>';
+            out.scrollTop = out.scrollHeight;
+          } catch {}
+        }
+      }
+    }
+    out.innerHTML = renderMarkdown(fullText);
+  } catch(e) {
+    container.innerHTML = `<div class="error-box">AI Analysis failed: ${e.message}</div>`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ── Simple markdown renderer ───────────────────────────────────────────────
+function renderMarkdown(md) {
+  return md
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 style="font-family:var(--mono);font-size:15px;font-weight:600;color:#c084fc;margin-bottom:12px">$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<[h|p|c])(.+)$/gm, '<p>$1</p>')
+    .replace(/<p><\/p>/g, '');
+}
+
+// ── IP Chat ────────────────────────────────────────────────────────────────
+let chatMessages = [];
+let chatResult = null;
+
+function openChat(data) {
+  chatResult = data;
+  chatMessages = [];
+  const container = document.getElementById('ip-chat-container');
+  if (!container) return;
+  container.innerHTML = `
+    <div class="ai-panel">
+      <div class="ai-panel-header">
+        <div class="ai-dot" style="width:8px;height:8px;border-radius:50%;background:#c084fc"></div>
+        <span class="ai-panel-title">Chat about ${data.ip}</span>
+      </div>
+      <div class="chat-wrap">
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-msg ai">Hi! I have full intelligence data for <strong>${data.ip}</strong> (${data.vpn_name || data.org_clean || data.org}). Ask me anything about this IP.</div>
+        </div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chat-input" placeholder="Is this IP safe? What country? Could this be Tor?..." onkeydown="if(event.key==='Enter')sendChat()"/>
+          <button class="chat-send" id="chat-send-btn" onclick="sendChat()">Send</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('chat-send-btn');
+  const text = input.value.trim();
+  if (!text || !chatResult) return;
+
+  input.value = '';
+  sendBtn.disabled = true;
+
+  const messagesEl = document.getElementById('chat-messages');
+  chatMessages.push({role:'user', content: text});
+
+  const userEl = document.createElement('div');
+  userEl.className = 'chat-msg user';
+  userEl.textContent = text;
+  messagesEl.appendChild(userEl);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  const aiEl = document.createElement('div');
+  aiEl.className = 'chat-msg ai streaming';
+  aiEl.innerHTML = '<span class="ai-cursor"></span>';
+  messagesEl.appendChild(aiEl);
+
+  let fullReply = '';
+  try {
+    const res = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({result: chatResult, messages: chatMessages})
+    });
+    if (!res.ok) throw new Error('Chat failed');
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream:true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const ds = line.slice(6);
+          if (ds === '[DONE]') break;
+          try {
+            const p = JSON.parse(ds);
+            fullReply += p.text;
+            aiEl.innerHTML = renderMarkdown(fullReply) + '<span class="ai-cursor"></span>';
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+          } catch {}
+        }
+      }
+    }
+    aiEl.innerHTML = renderMarkdown(fullReply);
+    aiEl.classList.remove('streaming');
+    chatMessages.push({role:'assistant', content: fullReply});
+  } catch(e) {
+    aiEl.textContent = 'Error: ' + e.message;
+    aiEl.classList.remove('streaming');
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+// ── AI Report ─────────────────────────────────────────────────────────────
+async function generateReport() {
+  if (!bulkResults.length) {
+    alert('Run a bulk lookup first, then generate the report.');
+    switchTab('bulk');
+    return;
+  }
+  const btn = document.getElementById('reportBtn');
+  const dlBtn = document.getElementById('reportDownloadBtn');
+  const out = document.getElementById('report-output');
+  btn.disabled = true;
+  dlBtn.disabled = true;
+  reportMarkdown = '';
+  out.innerHTML = `<div class="ai-thinking" style="margin-top:14px">
+    <span>Generating threat report for ${bulkResults.length} IPs</span>
+    <div class="ai-thinking-dots"><span></span><span></span><span></span></div>
+  </div>`;
+  try {
+    const res = await fetch('/api/ai/report', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({results: bulkResults})
+    });
+    if (!res.ok) throw new Error('Report generation failed');
+    const blob = await res.blob();
+    reportMarkdown = await blob.text();
+    out.innerHTML = `<div class="report-preview">${renderMarkdown(reportMarkdown)}</div>`;
+    dlBtn.disabled = false;
+  } catch(e) {
+    out.innerHTML = `<div class="error-box" style="margin-top:14px">Report failed: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function downloadReport() {
+  if (!reportMarkdown) return;
+  const blob = new Blob([reportMarkdown], {type:'text/markdown'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'vpn_threat_report.md'; a.click();
+  URL.revokeObjectURL(url);
+}
+
 </script>
 </body>
 </html>
