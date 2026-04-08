@@ -841,38 +841,13 @@ async function runAiAnalysis(data) {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({result: data})
     });
-    if (!res.ok) throw new Error('AI analysis failed');
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let fullText = '';
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.detail || 'AI analysis failed');
 
     document.getElementById('ai-thinking').style.display = 'none';
     const out = document.getElementById('ai-stream-output');
     out.style.display = 'block';
-    out.innerHTML = '<span class="ai-cursor"></span>';
-
-    while (true) {
-      const {done, value} = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, {stream: true});
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data_str = line.slice(6);
-          if (data_str === '[DONE]') break;
-          try {
-            const parsed = JSON.parse(data_str);
-            fullText += parsed.text;
-            out.innerHTML = renderMarkdown(fullText) + '<span class="ai-cursor"></span>';
-            out.scrollTop = out.scrollHeight;
-          } catch {}
-        }
-      }
-    }
-    out.innerHTML = renderMarkdown(fullText);
+    out.innerHTML = renderMarkdown(json.text);
   } catch(e) {
     container.innerHTML = `<div class="error-box">AI Analysis failed: ${e.message}</div>`;
   } finally {
@@ -942,39 +917,19 @@ async function sendChat() {
   aiEl.innerHTML = '<span class="ai-cursor"></span>';
   messagesEl.appendChild(aiEl);
 
-  let fullReply = '';
   try {
     const res = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({result: chatResult, messages: chatMessages})
     });
-    if (!res.ok) throw new Error('Chat failed');
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    while (true) {
-      const {done, value} = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, {stream:true});
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const ds = line.slice(6);
-          if (ds === '[DONE]') break;
-          try {
-            const p = JSON.parse(ds);
-            fullReply += p.text;
-            aiEl.innerHTML = renderMarkdown(fullReply) + '<span class="ai-cursor"></span>';
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-          } catch {}
-        }
-      }
-    }
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.detail || 'Chat failed');
+    const fullReply = json.text;
     aiEl.innerHTML = renderMarkdown(fullReply);
     aiEl.classList.remove('streaming');
     chatMessages.push({role:'assistant', content: fullReply});
+    messagesEl.scrollTop = messagesEl.scrollHeight;
   } catch(e) {
     aiEl.textContent = 'Error: ' + e.message;
     aiEl.classList.remove('streaming');
